@@ -21,7 +21,6 @@
 					sans-serif;
 				min-height: 100vh;
 				display: flex;
-				letter-spacing: -0.1em;
 			}
 
 			.container {
@@ -29,11 +28,15 @@
 				padding: 0.5em;
 				display: flex;
 				flex-direction: column;
-				gap: 0.5em;
+				gap: 2em;
 			}
 
 			h1 {
 				font-size: 1.5rem;
+				font-weight: 600;
+			}
+			h2 {
+				font-size: 1.25rem;
 				font-weight: 600;
 			}
 
@@ -55,7 +58,8 @@
 				flex-direction: column;
 			}
 
-			#raw-toggle {
+			#raw-toggle,
+			#docs-toggle {
 				background: none;
 				border: none;
 				padding: 0;
@@ -66,7 +70,8 @@
 				align-self: flex-start;
 			}
 
-			#raw-toggle:hover {
+			#raw-toggle:hover,
+			#docs-toggle:hover {
 				color: black;
 			}
 
@@ -125,27 +130,218 @@
 			.label {
 				font-weight: 400;
 			}
+
+			.docs {
+				max-width: 760px;
+				display: flex;
+				flex-direction: column;
+				gap: 1.5rem;
+				letter-spacing: 0;
+				line-height: 1.5;
+			}
+
+			.docs[hidden] {
+				display: none;
+			}
+
+			.docs section {
+				display: flex;
+				flex-direction: column;
+				gap: 0.5rem;
+			}
+
+			.docs h3 {
+				font-size: 1rem;
+				font-weight: 600;
+			}
+
+			.docs p,
+			.docs li,
+			.docs table {
+				font-size: 0.9rem;
+			}
+
+			.docs code,
+			.docs pre {
+				font-family: "SF Mono", "Fira Code", monospace;
+				font-size: 0.8rem;
+			}
+
+			.docs code {
+				letter-spacing: 0;
+			}
+
+			.docs pre {
+				padding: 1rem;
+				border: 1px solid black;
+				border-radius: 0.75rem;
+				overflow-x: auto;
+				line-height: 1.6;
+			}
+
+			.docs table {
+				width: 100%;
+				border-collapse: collapse;
+			}
+
+			.docs th,
+			.docs td {
+				padding: 0.5rem 0.75rem 0.5rem 0;
+				border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+				text-align: left;
+				vertical-align: top;
+			}
+
+			.docs th {
+				font-weight: 600;
+			}
+
+			.docs ul {
+				padding-left: 1.25rem;
+			}
+			.big-section {
+				display: flex;
+				flex-direction: column;
+				gap: 0.5rem;
+			}
+
+			.section-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.5rem;
+			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
-			<nav>
-				<h1>sun</h1>
-				<a href="https://eeru.net">eeru.net</a>
-			</nav>
+			<section class="big-section">
+				<nav>
+					<h1>sun</h1>
+					<a href="https://eeru.net">eeru.net</a>
+				</nav>
 
-			<div class="divider"></div>
+				<div class="divider"></div>
 
-			<form id="location-form">
-				<input type="text" id="query" value="new york" />
-				<button type="submit">Go</button>
-			</form>
+				<form id="location-form">
+					<input type="text" id="query" value="new york" />
+					<button type="submit">Go</button>
+				</form>
 
-			<div id="output">
-				<p id="formatted-output"></p>
-				<button id="raw-toggle">show raw</button>
-				<pre id="raw-output"></pre>
-			</div>
+				<div id="output">
+					<p id="formatted-output"></p>
+					<button id="raw-toggle">show raw</button>
+					<pre id="raw-output"></pre>
+				</div>
+			</section>
+			<section class="big-section">
+				<div class="section-header">
+					<h2>docs</h2>
+					<button
+						id="docs-toggle"
+						type="button"
+						aria-controls="docs"
+						aria-expanded="true"
+					>
+						hide docs
+					</button>
+				</div>
+				<div id="docs" class="docs">
+					<section>
+						<h3>sun times</h3>
+						<p>
+							Returns sunrise, sunset, solar noon, day length, and twilight
+							times for a coordinate and calendar date. All timestamps are in
+							UTC.
+						</p>
+						<pre><code>GET /json?lat=40.7128&amp;lng=-74.0060&amp;date=2026-06-12</code></pre>
+					</section>
+
+					<section>
+						<h3>query parameters</h3>
+						<table>
+							<thead>
+								<tr>
+									<th>name</th>
+									<th>required</th>
+									<th>description</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td><code>lat</code></td>
+									<td>yes</td>
+									<td>Latitude from <code>-90</code> to <code>90</code>.</td>
+								</tr>
+								<tr>
+									<td><code>lng</code></td>
+									<td>yes</td>
+									<td>Longitude from <code>-180</code> to <code>180</code>.</td>
+								</tr>
+								<tr>
+									<td><code>date</code></td>
+									<td>no</td>
+									<td>
+										A calendar date in <code>YYYY-MM-DD</code> format, or
+										<code>today</code>. Defaults to the current UTC date.
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</section>
+
+					<section>
+						<h3>examples</h3>
+						<pre><code>curl "/json?lat=40.7128&amp;lng=-74.0060&amp;date=today"</code></pre>
+						<pre><code>const response = await fetch(
+  "/json?lat=40.7128&amp;lng=-74.0060&amp;date=2026-06-12"
+);
+const data = await response.json();</code></pre>
+					</section>
+
+					<section>
+						<h3>response</h3>
+						<pre><code>{
+  "results": {
+    "sunrise": "2026-06-12T13:04:30+00:00",
+    "sunset": "2026-06-12T04:07:41+00:00",
+    "solar_noon": "2026-06-12T20:36:06+00:00",
+    "day_length": 54190.730342635026,
+    "civil_twilight_begin": "2026-06-12T12:31:15+00:00",
+    "civil_twilight_end": "2026-06-12T04:40:57+00:00",
+    "nautical_twilight_begin": "2026-06-12T11:48:53+00:00",
+    "nautical_twilight_end": "2026-06-12T05:23:18+00:00",
+    "astronomical_twilight_begin": "2026-06-12T10:59:04+00:00",
+    "astronomical_twilight_end": "2026-06-12T06:13:07+00:00"
+  },
+  "status": "OK"
+}</code></pre>
+						<p>
+							<code>day_length</code> is measured in seconds. At extreme
+							latitudes, unavailable times and day length are <code>null</code>,
+							and <code>polar_condition</code> is either
+							<code>POLAR_DAY</code> or <code>POLAR_NIGHT</code>.
+						</p>
+					</section>
+
+					<section>
+						<h3>errors</h3>
+						<p>
+							Invalid or missing parameters return HTTP <code>400</code> with a
+							JSON error.
+						</p>
+						<pre><code>{
+  "status": "ERROR",
+  "error": "missing required query parameter: lat"
+}</code></pre>
+					</section>
+
+					<section>
+						<h3>health</h3>
+						<p><code>GET /health</code> returns HTTP <code>200</code>.</p>
+					</section>
+				</div>
+			</section>
 		</div>
 		<script src="/location.js"></script>
 		<script src="/app.js"></script>

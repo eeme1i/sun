@@ -3,6 +3,10 @@ const formattedOutput = document.getElementById("formatted-output");
 const locationForm = document.getElementById("location-form");
 const queryInput = document.getElementById("query");
 const rawToggle = document.getElementById("raw-toggle");
+const docs = document.getElementById("docs");
+const docsToggle = document.getElementById("docs-toggle");
+
+const docsVisibilityKey = "sun:docs-visible";
 
 let countdownInterval = null;
 
@@ -25,7 +29,37 @@ rawToggle.addEventListener("click", () => {
 	rawToggle.textContent = isHidden ? "hide raw" : "show raw";
 });
 
+docsToggle.addEventListener("click", () => {
+	setDocsVisible(docs.hidden);
+});
+
 // -- Display helpers
+
+function setDocsVisible(isVisible) {
+	docs.hidden = !isVisible;
+	docsToggle.textContent = isVisible ? "hide docs" : "show docs";
+	docsToggle.setAttribute("aria-expanded", String(isVisible));
+
+	try {
+		localStorage.setItem(docsVisibilityKey, isVisible ? "true" : "false");
+	} catch {
+		// Ignore storage failures; the toggle should still work for this page load.
+	}
+}
+
+function restoreDocsVisibility() {
+	let isVisible = true;
+
+	try {
+		isVisible = localStorage.getItem(docsVisibilityKey) !== "false";
+	} catch {
+		isVisible = true;
+	}
+
+	setDocsVisible(isVisible);
+}
+
+restoreDocsVisibility();
 
 function showResults(data) {
 	rawOutput.textContent = JSON.stringify(data, null, 2);
@@ -149,7 +183,11 @@ function getCachedSunTimes(lat, lng, date) {
 
 function setCachedSunTimes(lat, lng, date, data) {
 	const key = sunCacheKey(lat, lng, date);
-	localStorage.setItem(key, JSON.stringify({ cachedDate: date, data }));
+	try {
+		localStorage.setItem(key, JSON.stringify({ cachedDate: date, data }));
+	} catch {
+		// Ignore storage failures; fetching fresh data still keeps the app usable.
+	}
 }
 
 function todayUTC() {

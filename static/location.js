@@ -19,13 +19,15 @@ const state = {
 // -- Cache helpers
 
 function getCachedLocation(query) {
-	const cachedQuery = localStorage.getItem("location:last-query");
-	if (cachedQuery !== query) return null;
-
-	const raw = localStorage.getItem(`location:${query}`);
-	if (!raw) return null;
+	let cachedQuery = null;
 
 	try {
+		cachedQuery = localStorage.getItem("location:last-query");
+		if (cachedQuery !== query) return null;
+
+		const raw = localStorage.getItem(`location:${query}`);
+		if (!raw) return null;
+
 		return JSON.parse(raw);
 	} catch {
 		return null;
@@ -33,8 +35,12 @@ function getCachedLocation(query) {
 }
 
 function setCachedLocation(query, loc) {
-	localStorage.setItem(`location:${query}`, JSON.stringify(loc));
-	localStorage.setItem("location:last-query", query);
+	try {
+		localStorage.setItem(`location:${query}`, JSON.stringify(loc));
+		localStorage.setItem("location:last-query", query);
+	} catch {
+		// Ignore storage failures; the fetched location is still returned.
+	}
 }
 
 // -- Public API
@@ -116,7 +122,14 @@ async function fetchLocation(query) {
  * @returns {Location | null}
  */
 function restoreCachedLocation() {
-	const cachedQuery = localStorage.getItem("location:last-query");
+	let cachedQuery = null;
+
+	try {
+		cachedQuery = localStorage.getItem("location:last-query");
+	} catch {
+		return null;
+	}
+
 	if (!cachedQuery) return null;
 
 	const loc = getCachedLocation(cachedQuery);
