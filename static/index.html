@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Sun API</title>
+		<style>
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+
+			body {
+				font-family:
+					"Inter",
+					system-ui,
+					-apple-system,
+					sans-serif;
+				min-height: 100vh;
+				display: flex;
+				letter-spacing: -0.1em;
+			}
+
+			.container {
+				width: 100%;
+				padding: 0.5em;
+				display: flex;
+				flex-direction: column;
+				gap: 0.5em;
+			}
+
+			h1 {
+				font-size: 1.5rem;
+				font-weight: 600;
+			}
+
+			#formatted-output {
+				font-size: 1.25rem;
+				font-weight: 500;
+				min-height: 1.5em;
+			}
+
+			#raw-output {
+				letter-spacing: 0;
+				padding: 1.25rem;
+				font-family: "SF Mono", "Fira Code", monospace;
+				font-size: 0.8rem;
+				line-height: 1.6;
+				white-space: pre-wrap;
+				min-height: 120px;
+				display: none;
+				flex-direction: column;
+			}
+
+			#raw-toggle {
+				background: none;
+				border: none;
+				padding: 0;
+				font-family: inherit;
+				font-size: 0.75rem;
+				color: rgba(0, 0, 0, 0.4);
+				cursor: pointer;
+				align-self: flex-start;
+			}
+
+			#raw-toggle:hover {
+				color: black;
+			}
+
+			#location-form {
+				display: flex;
+				gap: 0.5em;
+				font-size: 1em;
+			}
+
+			#location-form input,
+			#location-form button {
+				padding: 0.5em 0.75em;
+				font-size: 1rem;
+				border-radius: 999px;
+				border: 1px solid black;
+				background: transparent;
+				color: black;
+			}
+
+			#location-form button {
+				cursor: pointer;
+			}
+
+			#location-form input:focus,
+			#location-form button:focus {
+				outline: none;
+				border-color: rgba(0, 0, 0, 0.25);
+			}
+
+			.divider {
+				width: 100%;
+				height: 1px;
+				background: black;
+			}
+
+			nav {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			a {
+				text-decoration: none;
+				color: black;
+			}
+
+			a:hover {
+				text-decoration: underline;
+			}
+
+			.formatted-output {
+				display: flex;
+				flex-direction: column;
+			}
+
+			.label {
+				font-weight: 400;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<nav>
+				<h1>sun</h1>
+				<a href="https://eeru.net">eeru.net</a>
+			</nav>
+
+			<div class="divider"></div>
+
+			<form id="location-form">
+				<input type="text" id="query" value="new york" />
+				<button type="submit">Go</button>
+			</form>
+
+			<div id="output">
+				<p id="formatted-output"></p>
+				<button id="raw-toggle">show raw</button>
+				<pre id="raw-output"></pre>
+			</div>
+		</div>
+		<script src="/location.js"></script>
+		<script src="/app.js"></script>
+	</body>
+</html>
