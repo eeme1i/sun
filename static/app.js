@@ -9,6 +9,7 @@ const docsToggle = document.getElementById("docs-toggle");
 const docsVisibilityKey = "sun:docs-visible";
 
 let countdownInterval = null;
+let countdownRunId = 0;
 
 locationForm.addEventListener("submit", async (e) => {
 	e.preventDefault();
@@ -68,15 +69,15 @@ function showResults(data) {
 
 function startCountdown(data) {
 	if (countdownInterval) clearInterval(countdownInterval);
+	const runId = ++countdownRunId;
 
 	const sunData = data.results || data;
-	const sunrise = sunData.sunrise ? new Date(sunData.sunrise) : null;
-	const sunset = sunData.sunset ? new Date(sunData.sunset) : null;
 
 	function tick() {
 		const now = new Date();
+		const nextEvent = getNextSunEvent(sunData, now);
 
-		if (!sunrise || !sunset) {
+		if (!nextEvent && (!sunData.sunrise || !sunData.sunset)) {
 			// Polar condition
 			if (sunData.polar_condition === "POLAR_DAY") {
 				setFormatted("☀️ the sun won't set today");
@@ -88,20 +89,17 @@ function startCountdown(data) {
 			return;
 		}
 
-		if (now < sunrise) {
-			// Before sunrise — it's night, sun will rise
-			const diff = sunrise - now;
-			setFormatted("the sun will rise in", formatDuration(diff));
-		} else if (now < sunset) {
-			// Between sunrise and sunset — it's day, sun will set
-			const diff = sunset - now;
-			setFormatted("the sun will set in", formatDuration(diff));
+		if (nextEvent) {
+			setFormatted(
+				`the sun will ${nextEvent.kind} in`,
+				formatDuration(nextEvent.time - now),
+			);
 		} else {
-			// After sunset — need tomorrow's sunrise
+			// No more events in this response; load the next UTC day.
 			setFormatted("the sun has set");
 			clearInterval(countdownInterval);
 			countdownInterval = null;
-			fetchTomorrowSunrise();
+			fetchNextSunEventDay(runId, getFollowingSunDate(data));
 		}
 	}
 
@@ -109,37 +107,77 @@ function startCountdown(data) {
 	countdownInterval = setInterval(tick, 1000);
 }
 
-async function fetchTomorrowSunrise() {
+function getNextSunEvent(sunData, now) {
+	const events = getOrderedSunEvents(sunData).filter((event) => event.time > now);
+	events.sort((a, b) => a.time - b.time);
+	return events[0] || null;
+}
+
+function getOrderedSunEvents(sunData) {
+	const sunrise = parseSunEventTime(sunData.sunrise);
+	const sunset = parseSunEventTime(sunData.sunset);
+	const solarNoon = parseSunEventTime(sunData.solar_noon);
+
+	if (!sunrise || !sunset) return [];
+	if (!solarNoon) {
+		return [
+			{ kind: "rise", time: sunrise },
+			{ kind: "set", time: sunset },
+		];
+	}
+
+	// The API returns UTC clock times on the requested date. Around midnight UTC,
+	// sunrise or sunset may need to move one day to preserve local solar order.
+	if (sunrise > solarNoon) sunrise.setUTCDate(sunrise.getUTCDate() - 1);
+	if (sunset < solarNoon) sunset.setUTCDate(sunset.getUTCDate() + 1);
+
+	return [
+		{ kind: "rise", time: sunrise },
+		{ kind: "set", time: sunset },
+	];
+}
+
+function parseSunEventTime(value) {
+	if (!value) return null;
+
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getFollowingSunDate(data) {
+	const resolvedDate = data.__resolvedDate || todayUTC();
+	const currentDate = todayUTC();
+
+	return currentDate > resolvedDate ? currentDate : addUtcDays(resolvedDate, 1);
+}
+
+function addUtcDays(dateStr, days) {
+	const date = new Date(`${dateStr}T00:00:00+00:00`);
+	date.setUTCDate(date.getUTCDate() + days);
+	return date.toISOString().slice(0, 10);
+}
+
+function markResolvedDate(data, date) {
+	try {
+		Object.defineProperty(data, "__resolvedDate", {
+			value: date,
+			configurable: true,
+		});
+	} catch {
+		// If the object cannot be marked, countdown fallback still works.
+	}
+
+	return data;
+}
+
+async function fetchNextSunEventDay(runId, dateStr) {
 	const loc = state.location;
 	if (!loc) return;
 
-	const tomorrow = new Date();
-	tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-	const dateStr = tomorrow.toISOString().slice(0, 10);
-
 	const data = await fetchSunTimes(loc.coord.lat, loc.coord.lon, dateStr);
-	const sunData = data.results || data;
-	const sunrise = sunData.sunrise ? new Date(sunData.sunrise) : null;
+	if (runId !== countdownRunId) return;
 
-	if (!sunrise) return;
-
-	// Restart countdown targeting tomorrow's sunrise
-	if (countdownInterval) clearInterval(countdownInterval);
-
-	function tick() {
-		const now = new Date();
-		const diff = sunrise - now;
-		if (diff <= 0) {
-			setFormatted("the sun is rising ☀️");
-			clearInterval(countdownInterval);
-			countdownInterval = null;
-			return;
-		}
-		setFormatted("the sun will rise in", formatDuration(diff));
-	}
-
-	tick();
-	countdownInterval = setInterval(tick, 1000);
+	startCountdown(data);
 }
 
 function setFormatted(label, timer) {
@@ -198,7 +236,7 @@ async function fetchSunTimes(lat, lng, date) {
 	const resolvedDate = date === "today" ? todayUTC() : date;
 
 	const cached = getCachedSunTimes(lat, lng, resolvedDate);
-	if (cached) return cached;
+	if (cached) return markResolvedDate(cached, resolvedDate);
 
 	const params = new URLSearchParams({ lat, lng, date: resolvedDate });
 	const res = await fetch(`/json?${params}`);
@@ -208,7 +246,7 @@ async function fetchSunTimes(lat, lng, date) {
 		setCachedSunTimes(lat, lng, resolvedDate, data);
 	}
 
-	return data;
+	return markResolvedDate(data, resolvedDate);
 }
 
 // Restore last-used location from cache, or default to a query
