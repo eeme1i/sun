@@ -1,4 +1,4 @@
-use chrono::{Datelike, NaiveDate, NaiveTime};
+use chrono::{Datelike, Duration, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 /// Describes why sunrise/sunset cannot be computed at extreme latitudes.
@@ -51,12 +51,13 @@ fn solar_declination_and_eqtime(jd: f64) -> (f64, f64) {
     let dec = sin_dec.asin().to_degrees();
 
     // Equation of time (minutes)
-    let y = epsilon.cos().tan().powi(2);
+    let eccentricity = 0.016708634;
+    let y = (epsilon / 2.0).tan().powi(2);
     let eq_time = 4.0
-        * (y * (2.0 * l_rad).sin() - 2.0 * (g_rad).sin()
-            + 4.0 * y * g_rad.sin() * (2.0 * l_rad).cos()
+        * (y * (2.0 * l_rad).sin() - 2.0 * eccentricity * g_rad.sin()
+            + 4.0 * eccentricity * y * g_rad.sin() * (2.0 * l_rad).cos()
             - 0.5 * y * y * (4.0 * l_rad).sin()
-            - 1.25 * (2.0 * g_rad).sin())
+            - 1.25 * eccentricity * eccentricity * (2.0 * g_rad).sin())
         .to_degrees();
 
     (dec, eq_time)
@@ -85,14 +86,11 @@ fn hour_angle(lat: f64, dec: f64, zenith: f64) -> Result<f64, PolarCondition> {
 /// Convert a total-minutes-since-midnight value into a UTC timestamp string
 /// for the given date.
 fn minutes_to_utc(date: NaiveDate, total_minutes: f64) -> String {
-    // Decompose total minutes into h:m:s without double-counting
-    let total_seconds = (total_minutes * 60.0).round() as u32;
-    let h = (total_seconds / 3600) % 24;
-    let m = (total_seconds % 3600) / 60;
-    let s = total_seconds % 60;
-
-    let time = NaiveTime::from_hms_opt(h, m, s).unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
-    let dt = date.and_time(time);
+    let total_seconds = (total_minutes * 60.0).round() as i64;
+    let dt = date
+        .and_hms_opt(0, 0, 0)
+        .expect("midnight is always a valid time")
+        + Duration::seconds(total_seconds);
     dt.format("%Y-%m-%dT%H:%M:%S+00:00").to_string()
 }
 
@@ -117,7 +115,7 @@ pub fn calc_sun_times(date: NaiveDate, lat: f64, lng: f64) -> SunTimes {
 
     let (dec, eq_time) = solar_declination_and_eqtime(jd_noon);
 
-    let solar_noon_mins = (720.0 - 4.0 * lng - eq_time) % 1440.0; // keep within [0,1440)
+    let solar_noon_mins = 720.0 - 4.0 * lng - eq_time;
 
     let solar_noon = minutes_to_utc(date, solar_noon_mins);
 
@@ -156,5 +154,41 @@ pub fn calc_sun_times(date: NaiveDate, lat: f64, lng: f64) -> SunTimes {
         astronomical_twilight_begin: astro.as_ref().ok().map(|e| e.0.clone()),
         astronomical_twilight_end: astro.as_ref().ok().map(|e| e.1.clone()),
         polar_condition,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pori_sun_times_are_in_the_expected_utc_hours() {
+        let date = NaiveDate::from_ymd_opt(2026, 8, 14).unwrap();
+        let times = calc_sun_times(date, 61.4850, 21.7970);
+
+        assert!(
+            times
+                .sunrise
+                .as_deref()
+                .unwrap()
+                .starts_with("2026-08-14T02:")
+        );
+        assert!(
+            times
+                .sunset
+                .as_deref()
+                .unwrap()
+                .starts_with("2026-08-14T18:")
+        );
+        assert!(times.solar_noon.starts_with("2026-08-14T10:"));
+        assert!(times.polar_condition.is_none());
+    }
+
+    #[test]
+    fn utc_timestamp_keeps_day_rollover() {
+        let date = NaiveDate::from_ymd_opt(2026, 8, 14).unwrap();
+
+        assert_eq!(minutes_to_utc(date, -30.0), "2026-08-13T23:30:00+00:00");
+        assert_eq!(minutes_to_utc(date, 1470.0), "2026-08-15T00:30:00+00:00");
     }
 }
