@@ -108,8 +108,7 @@ pub struct SunTimes {
     pub nautical_twilight_end: Option<String>,
     pub astronomical_twilight_begin: Option<String>,
     pub astronomical_twilight_end: Option<String>,
-    /// Present only when sunrise/sunset cannot be computed (extreme latitudes).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// `None` during a normal sunrise/sunset cycle, otherwise the polar condition.
     pub polar_condition: Option<PolarCondition>,
 }
 

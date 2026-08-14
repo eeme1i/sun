@@ -312,15 +312,21 @@ const data = await response.json();</code></pre>
     "nautical_twilight_begin": "2026-06-12T11:48:53+00:00",
     "nautical_twilight_end": "2026-06-12T05:23:18+00:00",
     "astronomical_twilight_begin": "2026-06-12T10:59:04+00:00",
-    "astronomical_twilight_end": "2026-06-12T06:13:07+00:00"
+    "astronomical_twilight_end": "2026-06-12T06:13:07+00:00",
+    "polar_condition": null
   },
   "status": "OK"
 }</code></pre>
 						<p>
-							<code>day_length</code> is measured in seconds. At extreme
-							latitudes, unavailable times and day length are <code>null</code>,
-							and <code>polar_condition</code> is either
-							<code>POLAR_DAY</code> or <code>POLAR_NIGHT</code>.
+							<code>day_length</code> is measured in seconds.
+							<code>polar_condition</code> is always included: it is
+							<code>null</code> during a normal sunrise and sunset cycle,
+							<code>POLAR_DAY</code> when the sun does not set, or
+							<code>POLAR_NIGHT</code> when the sun does not rise. In a polar
+							condition, <code>sunrise</code>, <code>sunset</code>, and
+							<code>day_length</code> are <code>null</code>. Twilight times are
+							calculated independently and may be a timestamp or
+							<code>null</code>.
 						</p>
 					</section>
 
